@@ -119,6 +119,8 @@ You will need the OpenAI API for all the agents, and [Alpha Vantage API](https:/
 ```bash
 export OPENAI_API_KEY=$YOUR_OPENAI_API_KEY
 export ALPHA_VANTAGE_API_KEY=$YOUR_ALPHA_VANTAGE_API_KEY
+# For Gemini usage:
+export GEMINI_API_KEY=$YOUR_GEMINI_API_KEY
 ```
 
 Alternatively, you can create a `.env` file in the project root with your API keys (see `.env.example` for reference):
@@ -133,9 +135,9 @@ cp .env.example .env
 
 You can also try out the CLI directly by running:
 ```bash
-python -m cli.main
+uv run python -m tradingagents.cli.main
 ```
-You will see a screen where you can select your desired tickers, date, LLMs, research depth, etc.
+You will be asked for the ticker, date, and analyst team. Other settings (models, research depth) are loaded from `tradingagents/default_config.py`.
 
 <p align="center">
   <img src="assets/cli/cli_init.png" width="100%" style="display: inline-block; margin: 0 2%;">
@@ -180,9 +182,10 @@ from tradingagents.default_config import DEFAULT_CONFIG
 
 # Create a custom config
 config = DEFAULT_CONFIG.copy()
-config["deep_think_llm"] = "gpt-4.1-nano"  # Use a different model
-config["quick_think_llm"] = "gpt-4.1-nano"  # Use a different model
-config["max_debate_rounds"] = 1  # Increase debate rounds
+config["deep_think_llm"] = "gemini/gemini-2.0-flash-exp"  # Example: Gemini 2.0
+config["quick_think_llm"] = "gemini/gemini-2.0-flash" 
+config["llm_provider"] = "google"
+config["max_debate_rounds"] = 1  # Debate rounds
 
 # Configure data vendors (default uses yfinance and Alpha Vantage)
 config["data_vendors"] = {

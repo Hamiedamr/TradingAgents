@@ -1,0 +1,7 @@
+
+- Always use `uv` for dependency management and running scripts.
+- Use `uv run <command>` instead of `python <command>` or `pip <command>`.
+- For new dependencies, use `uv add <package>`.
+- Ensure all commands are cross-platform compatible (Windows focus for this local setup).
+- When a task involves running a script, prioritize `uv run python <script.py>`.
+- Maintain a clean working directory; do not create redundant test scripts unless asked.

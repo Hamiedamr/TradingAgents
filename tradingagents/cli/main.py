@@ -1,5 +1,6 @@
 from typing import Optional
 import datetime
+import os
 import typer
 from pathlib import Path
 from functools import wraps
@@ -26,8 +27,8 @@ from rich.rule import Rule
 
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
-from cli.models import AnalystType
-from cli.utils import *
+from tradingagents.cli.models import AnalystType
+from tradingagents.cli.utils import *
 
 console = Console()
 
@@ -398,7 +399,8 @@ def update_display(layout, spinner_text=None):
 def get_user_selections():
     """Get all user selections before starting the analysis display."""
     # Display ASCII art welcome message
-    with open("./cli/static/welcome.txt", "r") as f:
+    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+    with open(os.path.join(static_dir, "welcome.txt"), "r") as f:
         welcome_ascii = f.read()
 
     # Create welcome box content
@@ -459,30 +461,16 @@ def get_user_selections():
         f"[green]Selected analysts:[/green] {', '.join(analyst.value for analyst in selected_analysts)}"
     )
 
-    # Step 4: Research depth
-    console.print(
-        create_question_box(
-            "Step 4: Research Depth", "Select your research depth level"
-        )
-    )
-    selected_research_depth = select_research_depth()
+    # Step 4: Research Depth (Default to Medium/Config)
+    selected_research_depth = DEFAULT_CONFIG.get("max_debate_rounds", 3)
 
-    # Step 5: OpenAI backend
-    console.print(
-        create_question_box(
-            "Step 5: OpenAI backend", "Select which service to talk to"
-        )
-    )
-    selected_llm_provider, backend_url = select_llm_provider()
+    # Step 5: OpenAI backend (Default to Config)
+    selected_llm_provider = DEFAULT_CONFIG.get("llm_provider", "google")
+    backend_url = DEFAULT_CONFIG.get("backend_url", "http://localhost:11434/v1")
     
-    # Step 6: Thinking agents
-    console.print(
-        create_question_box(
-            "Step 6: Thinking Agents", "Select your thinking agents for analysis"
-        )
-    )
-    selected_shallow_thinker = select_shallow_thinking_agent(selected_llm_provider)
-    selected_deep_thinker = select_deep_thinking_agent(selected_llm_provider)
+    # Step 6: Thinking agents (Default to Config)
+    selected_shallow_thinker = DEFAULT_CONFIG.get("quick_think_llm")
+    selected_deep_thinker = DEFAULT_CONFIG.get("deep_think_llm")
 
     return {
         "ticker": selected_ticker,

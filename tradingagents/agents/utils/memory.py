@@ -1,26 +1,68 @@
 import chromadb
 from chromadb.config import Settings
-from openai import OpenAI
+import litellm
+from ollama import Client
 
 
 class FinancialSituationMemory:
     def __init__(self, name, config):
-        if config["backend_url"] == "http://localhost:11434/v1":
-            self.embedding = "nomic-embed-text"
+        if config["backend_url"] == "http://localhost:11434/v1" or "127.0.0.1" in config["backend_url"]:
+            self.embedding = "ollama/nomic-embed-text"
         else:
             self.embedding = "text-embedding-3-small"
-        self.client = OpenAI(base_url=config["backend_url"])
+        
+        # litellm doesn't need a client instantiation for embeddings, 
+        # but we might need config context if available. 
+        self.config = config
         self.chroma_client = chromadb.Client(Settings(allow_reset=True))
+        
+        # Initialize Ollama Client if needed
+        if "ollama/" in self.embedding:
+            base_url = self.config.get("backend_url").replace("/v1", "").replace("localhost", "127.0.0.1")
+            self.ollama_client = Client(host=base_url)
+
+        try:
+            self.chroma_client.delete_collection(name=name)
+        except Exception:
+            pass # Collection didn't exist, which is fine
+        
         self.situation_collection = self.chroma_client.create_collection(name=name)
 
     def get_embedding(self, text):
-        """Get OpenAI embedding for a text"""
+        """Get embedding for a text"""
         
-        response = self.client.embeddings.create(
-            model=self.embedding, input=text
-        )
-        return response.data[0].embedding
+        # 1. Ollama Path
+        if "ollama/" in self.embedding:
+            # Clean model name (e.g., 'ollama/nomic-embed-text' -> 'nomic-embed-text')
+            model_name = self.embedding.replace("ollama/", "")
+            
+            try:
+                # Use expected response object attribute
+                response = self.ollama_client.embeddings(
+                    model=model_name,
+                    prompt=text
+                )
+                # The official python client returns an object with .embedding attribute in recent versions,
+                # or a dictionary in older ones. Simple hasattr check is cleanest.
+                if hasattr(response, 'embedding'):
+                    return response.embedding
+                return response['embedding']
 
+            except Exception as e:
+                # Clear error propagation
+                if "404" in str(e):
+                    raise ValueError(f"Model '{model_name}' not found. Run `uv run ollama pull {model_name}`.") from e
+                raise ConnectionError(f"Ollama embedding failed: {e}") from e
+
+        # 2. LiteLLM Path (OpenAI etc)
+        try:
+            response = litellm.embedding(
+                model=self.embedding, 
+                input=text
+            )
+            return response['data'][0]['embedding']
+        except Exception as e:
+            raise RuntimeError(f"Embedding failed for {self.embedding}: {e}")
     def add_situations(self, situations_and_advice):
         """Add financial situations and their corresponding advice. Parameter is a list of tuples (situation, rec)"""
 

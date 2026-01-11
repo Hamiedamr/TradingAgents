@@ -1,7 +1,7 @@
 import questionary
 from typing import List, Optional, Tuple, Dict
 
-from cli.models import AnalystType
+from .models import AnalystType
 
 ANALYST_ORDER = [
     ("Market Analyst", AnalystType.MARKET),

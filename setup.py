@@ -29,7 +29,7 @@ setup(
     python_requires=">=3.10",
     entry_points={
         "console_scripts": [
-            "tradingagents=cli.main:app",
+            "tradingagents=tradingagents.cli.main:app",
         ],
     },
     classifiers=[
