@@ -14,7 +14,8 @@ from .alpha_vantage import (
     get_cashflow as get_alpha_vantage_cashflow,
     get_income_statement as get_alpha_vantage_income_statement,
     get_insider_transactions as get_alpha_vantage_insider_transactions,
-    get_news as get_alpha_vantage_news
+    get_news as get_alpha_vantage_news,
+    get_global_news as get_alpha_vantage_global_news
 )
 from .alpha_vantage_common import AlphaVantageRateLimitError
 
@@ -104,6 +105,7 @@ VENDOR_METHODS = {
         "local": [get_finnhub_news, get_reddit_company_news, get_google_news],
     },
     "get_global_news": {
+        "alpha_vantage": get_alpha_vantage_global_news,
         "openai": get_global_news_llm,
         "local": get_reddit_global_news
     },
@@ -160,8 +162,8 @@ def route_to_vendor(method: str, *args, **kwargs):
             fallback_vendors.append(vendor)
 
     # Debug: Print fallback ordering
-    primary_str = " → ".join(primary_vendors)
-    fallback_str = " → ".join(fallback_vendors)
+    primary_str = " -> ".join(primary_vendors)
+    fallback_str = " -> ".join(fallback_vendors)
     print(f"DEBUG: {method} - Primary: [{primary_str}] | Full fallback order: [{fallback_str}]")
 
     # Track results and execution state

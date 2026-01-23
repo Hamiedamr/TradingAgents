@@ -1,68 +1,41 @@
 import chromadb
 from chromadb.config import Settings
 import litellm
-from ollama import Client
+from fastembed import TextEmbedding
 
 
 class FinancialSituationMemory:
     def __init__(self, name, config):
-        if config["backend_url"] == "http://localhost:11434/v1" or "127.0.0.1" in config["backend_url"]:
-            self.embedding = "ollama/nomic-embed-text"
+        if "model_cache" in config:
+             cache_dir = config["model_cache"]
         else:
-            self.embedding = "text-embedding-3-small"
+             cache_dir = "model_cache"
+             
+        self.embedding_model = TextEmbedding(
+            model_name="intfloat/multilingual-e5-large", 
+            cache_dir=cache_dir
+        )
         
-        # litellm doesn't need a client instantiation for embeddings, 
-        # but we might need config context if available. 
         self.config = config
         self.chroma_client = chromadb.Client(Settings(allow_reset=True))
         
-        # Initialize Ollama Client if needed
-        if "ollama/" in self.embedding:
-            base_url = self.config.get("backend_url").replace("/v1", "").replace("localhost", "127.0.0.1")
-            self.ollama_client = Client(host=base_url)
-
         try:
             self.chroma_client.delete_collection(name=name)
         except Exception:
             pass # Collection didn't exist, which is fine
         
-        self.situation_collection = self.chroma_client.create_collection(name=name)
+        # Create collection
+        # Note: We manage embeddings manually, so we don't pass an embedding function to Chroma
+        self.situation_collection = self.chroma_client.get_or_create_collection(name=name)
 
     def get_embedding(self, text):
-        """Get embedding for a text"""
-        
-        # 1. Ollama Path
-        if "ollama/" in self.embedding:
-            # Clean model name (e.g., 'ollama/nomic-embed-text' -> 'nomic-embed-text')
-            model_name = self.embedding.replace("ollama/", "")
-            
-            try:
-                # Use expected response object attribute
-                response = self.ollama_client.embeddings(
-                    model=model_name,
-                    prompt=text
-                )
-                # The official python client returns an object with .embedding attribute in recent versions,
-                # or a dictionary in older ones. Simple hasattr check is cleanest.
-                if hasattr(response, 'embedding'):
-                    return response.embedding
-                return response['embedding']
-
-            except Exception as e:
-                # Clear error propagation
-                if "404" in str(e):
-                    raise ValueError(f"Model '{model_name}' not found. Run `uv run ollama pull {model_name}`.") from e
-                raise ConnectionError(f"Ollama embedding failed: {e}") from e
-
-        # 2. LiteLLM Path (OpenAI etc)
+        """Get embedding for a text using FastEmbed"""
         try:
-            response = litellm.embedding(
-                model=self.embedding, 
-                input=text
-            )
-            return response['data'][0]['embedding']
+            # FastEmbed returns a generator of embeddings, we take the first one for the single text
+            embeddings = list(self.embedding_model.embed([text]))
+            return embeddings[0].tolist() if hasattr(embeddings[0], 'tolist') else list(embeddings[0])
         except Exception as e:
-            raise RuntimeError(f"Embedding failed for {self.embedding}: {e}")
+            raise RuntimeError(f"FastEmbed generation failed: {e}")
     def add_situations(self, situations_and_advice):
         """Add financial situations and their corresponding advice. Parameter is a list of tuples (situation, rec)"""
 
@@ -111,7 +84,10 @@ class FinancialSituationMemory:
 
 if __name__ == "__main__":
     # Example usage
-    matcher = FinancialSituationMemory()
+    # Example usage
+    # Mock config
+    config = {"backend_url": "http://localhost:11434/v1"}
+    matcher = FinancialSituationMemory(name="debug_verification", config=config)
 
     # Example data
     example_data = [

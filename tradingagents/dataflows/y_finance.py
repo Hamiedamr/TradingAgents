@@ -128,6 +128,18 @@ def get_stock_stats_indicators_window(
         ),
     }
 
+    # Handle multiple indicators (comma-separated)
+    if "," in indicator:
+        indicators = [ind.strip() for ind in indicator.split(",") if ind.strip()]
+        results = []
+        for ind in indicators:
+            try:
+                # Recursively call for each indicator
+                results.append(get_stock_stats_indicators_window(symbol, ind, curr_date, look_back_days))
+            except Exception as e:
+                results.append(f"Error for {ind}: {e}")
+        return "\n\n".join(results)
+
     if indicator not in best_ind_params:
         raise ValueError(
             f"Indicator {indicator} is not supported. Please choose from: {list(best_ind_params.keys())}"
@@ -235,19 +247,45 @@ def _get_stock_stats_bulk(
             data = pd.read_csv(data_file)
             data["Date"] = pd.to_datetime(data["Date"])
         else:
-            data = yf.download(
-                symbol,
-                start=start_date_str,
-                end=end_date_str,
-                multi_level_index=False,
-                progress=False,
-                auto_adjust=True,
-            )
-            data = data.reset_index()
-            data.to_csv(data_file, index=False)
-        
-        df = wrap(data)
-        df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
+            try:
+                data = yf.download(
+                    symbol,
+                    start=start_date_str,
+                    end=end_date_str,
+                    progress=False,
+                    auto_adjust=True,
+                )
+            except Exception as e:
+                print(f"CRITICAL: yf.download failed for {symbol}: {e}")
+                raise e
+                
+                raise e
+                
+            if data.empty:
+                 print(f"CRITICAL: yf.download returned empty data for {symbol}")
+            
+    
+    # Ensure numeric columns are actually numeric (fix for yfinance v1.0 / bad cache)
+    numeric_cols = ["Open", "High", "Low", "Close", "Adj Close", "Volume"]
+            
+    # Flatten MultiIndex columns if present
+    if isinstance(data.columns, pd.MultiIndex):
+        data.columns = data.columns.get_level_values(0)
+    
+    # Cast to numeric
+    for col in numeric_cols:
+        if col in data.columns:
+            # First clean any "Price" or "Ticker" rows if bad cache read
+            # Simply coerce to NaN then drop? Or just coerce.
+            data[col] = pd.to_numeric(data[col], errors='coerce')
+    
+    # Drop rows where Close is NaN (header rows from bad cache)
+    if "Close" in data.columns:
+        data = data.dropna(subset=["Close"])
+
+    df = wrap(data)
+    if "Date" in df.columns:
+        df["Date"] = pd.to_datetime(df["Date"]).dt.strftime("%Y-%m-%d")
     
     # Calculate the indicator for all rows at once
     df[indicator]  # This triggers stockstats to calculate the indicator

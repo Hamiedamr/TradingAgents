@@ -30,7 +30,10 @@ def create_social_media_analyst(llm):
                     " will help where you left off. Execute what you can to make progress."
                     " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
                     " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
-                    " IMPORTANT: You are using a Reasoning Model. You MUST provide a detailed thought process (Thought:) before calling any tool. Explain WHY you are choosing a specific tool and what you expect to learn."
+                    " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
+                    " IMPORTANT: You are using a native tool-calling model. Do NOT output 'Thought:' or 'call:' prefixes in your text."
+                    " Simply generate the valid tool call objects directly."
+                    " Do NOT use namespaces like 'default_api:'. Use the exact tool names provided."
                     " You have access to the following tools: {tool_names}.\n{system_message}"
                     "For your reference, the current date is {current_date}. The current company we want to analyze is {ticker}",
                 ),

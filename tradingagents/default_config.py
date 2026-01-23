@@ -8,10 +8,14 @@ DEFAULT_CONFIG = {
         os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
         "dataflows/data_cache",
     ),
+    "model_cache": os.path.join(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+        "model_cache",
+    ),
     # LLM settings
     "llm_provider": "google", # Kept for reference, but LiteLLM uses model prefixes
-    "deep_think_llm": "gemini/gemini-2.0-flash-exp", # Example: provider/model
-    "quick_think_llm": "gemini/gemini-2.0-flash",
+    "deep_think_llm": "gemini/gemini-flash-latest", # Example: provider/model
+    "quick_think_llm": "gemini/gemini-flash-latest",
     "backend_url": "http://localhost:11434/v1", # Ollama for embeddings
     # Debate and discussion settings
     "max_debate_rounds": 1,

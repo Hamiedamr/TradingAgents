@@ -26,6 +26,8 @@ def apply_styles():
             margin-bottom: 1rem;
             border: 1px solid #3e3e3e;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow-wrap: anywhere; /* Force break long words/URLs */
+            word-break: break-word;   /* detailed wrapping */
         }
         
         /* User Message Specifics */
@@ -38,6 +40,9 @@ def apply_styles():
             background-color: transparent;
             border: none;
             box-shadow: none;
+            /* Ensure content inside assistant messages also wraps */
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         /* Input Button Styling */

@@ -69,36 +69,20 @@ class TradingAgentsGraph:
             exist_ok=True,
         )
 
-        # Initialize LLMs
-        if self.config["llm_provider"].lower() == "google":
-             # Use Native LangChain Google integration for better Gemini 3 support
-            from langchain_google_genai import ChatGoogleGenerativeAI
-            api_key = os.environ.get("GEMINI_API_KEY")
-            self.deep_thinking_llm = ChatGoogleGenerativeAI(
-                model=self.config["deep_think_llm"].replace("gemini/", ""), # Remove litellm prefix
-                google_api_key=api_key,
-                convert_system_message_to_human=True # Sometimes needed
-            )
-            self.quick_thinking_llm = ChatGoogleGenerativeAI(
-                model=self.config["quick_think_llm"].replace("gemini/", ""),
-                google_api_key=api_key
-            )
-        elif self.config["llm_provider"].lower() == "openai":
-            api_key = os.environ.get("OPENAI_API_KEY")
-            self.deep_thinking_llm = ChatLiteLLM(
-                model=self.config["deep_think_llm"], 
-                base_url=self.config.get("backend_url"),
-                api_key=api_key
-            )
-            self.quick_thinking_llm = ChatLiteLLM(
-                model=self.config["quick_think_llm"], 
-                base_url=self.config.get("backend_url"),
-                api_key=api_key
-            )
-        else:
-             # Fallback for others
-            self.deep_thinking_llm = ChatLiteLLM(model=self.config["deep_think_llm"], base_url=self.config.get("backend_url"))
-            self.quick_thinking_llm = ChatLiteLLM(model=self.config["quick_think_llm"], base_url=self.config.get("backend_url"))
+        # Initialize LLMs using LiteLLM for all providers
+        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENAI_API_KEY") 
+        # Note: LiteLLM handles keys from env if set correctly (e.g. GEMINI_API_KEY, OPENAI_API_KEY)
+        
+        self.deep_thinking_llm = ChatLiteLLM(
+            model=self.config["deep_think_llm"], 
+            base_url=self.config.get("backend_url"),
+            temperature=0
+        )
+        self.quick_thinking_llm = ChatLiteLLM(
+            model=self.config["quick_think_llm"], 
+            base_url=self.config.get("backend_url"),
+            temperature=0
+        )
         
         # Initialize memories
         self.bull_memory = FinancialSituationMemory("bull_memory", self.config)

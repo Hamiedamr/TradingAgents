@@ -27,6 +27,11 @@ st.set_page_config(
 apply_styles()
 
 def main():
+    # --- Proactive Logic: Clean logs ---
+    import warnings
+    # Suppress noise from Pydantic serializer (harmless but annoying)
+    warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
+
     # --- Sidebar Configuration ---
     st.sidebar.title("Configuration")
     
@@ -77,19 +82,26 @@ def main():
             
             # Shortcut: Detect "Analyze TARGET" at any time to reset and start
             import re
-            shortcut_ticker = re.findall(r'\b[A-Z]{1,5}\b', prompt.upper())
-            if "ANALYZE" in prompt.upper() and shortcut_ticker:
-                 st.session_state.workflow_state["ticker"] = shortcut_ticker[0]
-                 st.session_state.workflow_state["date"] = datetime.datetime.now().date()
-                 st.session_state.workflow_state["step"] = "run_analysis"
-                 current_step = "run_analysis" # Force jump
+            # Updated regex: Allow 1-10 chars, letters and hyphens (e.g. BTC-USD)
+            if "ANALYZE" in prompt.upper():
+                 # Find all potential tickers
+                 candidates = re.findall(r'\b[A-Z0-9-]{1,10}\b', prompt.upper())
+                 # Filter out the command keyword "ANALYZE"
+                 valid_candidates = [c for c in candidates if c != "ANALYZE"]
+                 
+                 if valid_candidates:
+                      st.session_state.workflow_state["ticker"] = valid_candidates[0]
+                      st.session_state.workflow_state["date"] = datetime.datetime.now().date()
+                      st.session_state.workflow_state["step"] = "run_analysis"
+                      current_step = "run_analysis" # Force jump
 
             # Linear Flow Logic
             if current_step == "ask_ticker":
                 # Assume input is ticker if not shortcut
                 potential_ticker = prompt.upper().strip()
-                # Basic validation (1-5 chars)
-                if 1 <= len(potential_ticker) <= 5 and potential_ticker.isalpha():
+                # Basic validation (1-10 chars, letters and hyphens allowed)
+                # Allow ETH-USD, BTC-USD, etc.
+                if 1 <= len(potential_ticker) <= 10 and potential_ticker.replace("-","").isalpha():
                     st.session_state.workflow_state["ticker"] = potential_ticker
                     st.session_state.workflow_state["step"] = "ask_date"
                     
@@ -97,7 +109,7 @@ def main():
                     st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 else:
-                    response = "I didn't catch a valid ticker. Please enter a stock symbol (e.g. NVDA, AAPL)."
+                    response = "I didn't catch a valid ticker. Please enter a stock symbol (e.g. NVDA, AAPL, ETH-USD)."
                     st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
 
